@@ -3,7 +3,7 @@ from random import randint
 from django.conf import settings
 from captcha.models import CaptchaStore
 from django.shortcuts import render, redirect, reverse, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator, InvalidPage
 from django.views.decorators.http import last_modified
@@ -45,7 +45,7 @@ def list_threads(request, board, pagenum=1):
 
 
 @never_cache
-@cache_page(3600)
+# @cache_page(3600)
 def get_thread(request, thread_id, board):
     if request.method == 'POST':
         form = PostForm(data=request.POST, files=request.FILES)
@@ -141,3 +141,13 @@ def info_page(request):
         return render(request, 'info_page.html', context)
     except Exception:
         return render(request, 'info_page.html', context)
+
+
+def post_vote(request):
+    vote = request.GET['vote']
+    post = Post.objects.get(pk=int(request.GET['post']))
+    if vote and post:
+        post.vote += 1 if int(vote) == 1 else -1
+        post.save()
+        return JsonResponse({'vote': post.vote})
+    return HttpResponse(status=400)

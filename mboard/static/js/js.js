@@ -21,6 +21,19 @@ $$('#id_file').forEach(function (file) {
 });
 captchaRefresh();
 
+function vote(button, vote) {
+    const postElmnt = button.closest('article');
+    const url = '/postvote/?' + new URLSearchParams({
+        'post': postElmnt.dataset.id,
+        'vote': vote,
+    });
+    fetch(url)
+        .then((r) => r.json())
+        .then(r => {
+            postElmnt.querySelector('#vote').innerText = r.vote;
+        });
+}
+
 function markUpBtn(btn, tagStart, tagEnd) {
     let elmnt = btn.form.querySelector('textarea');
     let selStart = elmnt.selectionStart;
@@ -490,10 +503,10 @@ function dragPostForm(elmnt) {
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        if((elmnt.parentNode.offsetTop - pos2) <= maxY && (elmnt.parentNode.offsetTop - pos2) >= 0){
+        if ((elmnt.parentNode.offsetTop - pos2) <= maxY && (elmnt.parentNode.offsetTop - pos2) >= 0) {
             elmnt.parentNode.style.top = (elmnt.parentNode.offsetTop - pos2) + "px";
         }
-        if((elmnt.parentNode.offsetLeft - pos1) <= maxX && (elmnt.parentNode.offsetLeft - pos1) >= 0){
+        if ((elmnt.parentNode.offsetLeft - pos1) <= maxX && (elmnt.parentNode.offsetLeft - pos1) >= 0) {
             elmnt.parentNode.style.left = (elmnt.parentNode.offsetLeft - pos1) + "px";
         }
     }
