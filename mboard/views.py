@@ -16,7 +16,7 @@ from django.views.decorators.cache import cache_page, never_cache
 
 
 @never_cache  # adds headers to response to disable browser cache
-@cache_page(3600)  # cache also resets (signals.py) after saving a new post, so it's only useful under a small load
+# @cache_page(3600)  # cache also resets (signals.py) after saving a new post, so it's only useful under a small load
 def list_threads(request, board, pagenum=1):
     board = get_object_or_404(Board, board_link=board)
     if request.method == 'POST':
@@ -24,9 +24,12 @@ def list_threads(request, board, pagenum=1):
         if form.is_valid():
             new_thread = form.save(commit=False)
             new_thread.board = board
+            new_thread.session_id = request.session.session_key
             new_thread.save()
             return redirect(reverse('mboard:get_thread', kwargs={'thread_id': new_thread.id, 'board': board}))
         return render(request, 'post_error.html', {'form': form, 'board': board})
+    if not request.session.session_key:
+        request.session.create()
     form = ThreadPostForm()
     threads = board.post_set.all().filter(thread__isnull=True).order_by('-bump')
     threads_dict, posts_ids = {}, {}
@@ -52,6 +55,7 @@ def get_thread(request, thread_id, board):
         if form.is_valid():
             new_post = form.save(commit=False)
             new_post.thread_id = thread_id
+            new_post.session_id = request.session.session_key
             new_post.thread.bump = new_post.bump
             new_post.thread.save()
             new_post.board = new_post.thread.board
@@ -61,6 +65,8 @@ def get_thread(request, thread_id, board):
         return render(request, 'post_error.html', {'form': form, 'board': board})
     board = get_object_or_404(Board, board_link=board)
     thread = get_object_or_404(Post, pk=thread_id)
+    if not request.session.session_key:
+        request.session.create()
     form = PostForm(initial={'thread_id': thread_id})
     context = {'thread': thread, 'posts_ids': {thread.pk: thread.posts_ids()}, 'form': form, 'board': board}
     return render(request, 'thread.html', context)
@@ -74,6 +80,7 @@ def ajax_posting(request):
             form = ThreadPostForm(data=request.POST, files=request.FILES)
         if form.is_valid():
             new_post = form.save(commit=False)
+            new_post.session_id = request.session.session_key
             if form.data.get('thread_id'):
                 new_post.thread_id = form.data['thread_id']
             new_post.board = Board.objects.get(board_link=request.POST['board'])

@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.sessions.models import Session
 
 
 class Post(models.Model):
@@ -13,6 +14,7 @@ class Post(models.Model):
     bump = models.DateTimeField(auto_now=True)
     board = models.ForeignKey('Board', on_delete=models.CASCADE, null=False, blank=False)
     vote = models.IntegerField(default=0)
+    session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return str(self.pk)
