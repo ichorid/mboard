@@ -37,3 +37,24 @@ class Board(models.Model):
 
     def __str__(self):
         return self.board_link
+
+
+class Rating(models.Model):
+    user = models.ForeignKey(Session, on_delete=models.CASCADE, null=True, related_name='user')
+    target = models.ForeignKey(Session, on_delete=models.CASCADE, null=True, related_name='target')
+    vote = models.IntegerField(default=0)
+    rank = models.FloatField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'target'], name='unique_constraint')
+        ]
+
+    def __str__(self):
+        # return str(self.user)
+        return str(self.target)
+
+
+class CalcTime(models.Model):
+    user = models.OneToOneField(Session, on_delete=models.CASCADE)
+    rank_calc_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
