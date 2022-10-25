@@ -1,5 +1,6 @@
 import random
 from email.utils import parsedate_to_datetime
+from pprint import pprint
 from random import randint
 from django.conf import settings
 from captcha.models import CaptchaStore
@@ -14,7 +15,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from datetime import timedelta
 from mboard.models import Post, Board, Rating, CalcTime
-from trust import BL_PHT
+from trust import BL_PHT, PersonalizedPageRank
 from .forms import PostForm, ThreadPostForm
 from django.views.decorators.cache import cache_page, never_cache
 import networkx as nx
@@ -64,13 +65,25 @@ def refresh_rank(request):
     # Add User -> Post edges (just read from Rating table)
     # Note this can overwrite default author vote if the author voted for his post.
     for node in Rating.objects.all():
+        # Do not overwrite edges added by the "add default author edges" procedure above,
+        # in case the corresponding DB rank row was added automatically by recalculation procedure earlier.
+        # If we do overwrite it with data from the DB, which could be vote=0.0,
+        # the result will be zero OPpost ratings.
+        # This is an ugly workaround that stems from the "user-target" Rating table keys design.
+        if G.get_edge_data(node.user, node.target, default={}).get(
+                'weight') == MINIMAL_AUTHOR_VOTE and node.vote == 0.0:
+            continue
+
         G.add_edge(node.user, node.target,
                    weight=node.vote if node.vote >= 0.0 else node.vote * NEGATIVE_VOTE_AMPLIFICATION_COEFFICIENT)
 
+    for x in G.edges():
+        print(x)
+
     rep = calc_rep(G, user)
     for target, rank in rep.items():
-        # print(user, target, rank)
-        if not (isinstance(user, Session) and isinstance(target, Post)):
+        print(target, rep)
+        if not isinstance(target, Post):
             # We only save User->Post edges in DB
             continue
         Rating.objects.update_or_create(user=user,
@@ -81,7 +94,8 @@ def refresh_rank(request):
 
 
 def calc_rep(graph, seed_node):
-    ppr = BL_PHT(graph, seed_node)
+    # ppr = BL_PHT(graph, seed_node)
+    ppr = PersonalizedPageRank(graph, seed_node)
     reputation = {}
     # print(graph.edges)
     for n in graph.nodes():
