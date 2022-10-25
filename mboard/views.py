@@ -4,7 +4,7 @@ from pprint import pprint
 from random import randint
 from django.conf import settings
 from captcha.models import CaptchaStore
-from django.db.models import Subquery, OuterRef
+from django.db.models import Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.http import JsonResponse
@@ -150,7 +150,7 @@ def list_threads(request, board, pagenum=1):
 
     threads = board.post_set.all().filter(thread__isnull=True)
     threads = multi_annotate(user, threads)
-    threads = threads.exclude(rank=0.0).order_by('-rank')
+    threads = threads.filter(Q(session=request.session.session_key) | Q(rank__gt=0)).order_by('-rank')
 
     threads_dict, posts_ids = {}, {}
     paginator = Paginator(threads, 10)
